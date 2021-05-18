@@ -19,6 +19,7 @@ import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -40,10 +41,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int WORD_LENGTH = 5;
     public static final int LIGHT_BLUE = Color.rgb(176, 200, 255);
     public static final int LIGHT_GREEN = Color.rgb(200, 255, 200);
+    private static final String TAG = "MainActivity.java";
     private ArrayList<String> words = new ArrayList<>();
     private Random random = new Random();
     private StackedLayout stackedLayout;
     private String word1, word2;
+    private Stack<View> placedTiles = new Stack<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
             String line = null;
             while((line = in.readLine()) != null) {
                 String word = line.trim();
+                if(word.length() == WORD_LENGTH) words.add(word);
                 /**
                  **
                  **  YOUR CODE GOES HERE
@@ -89,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                     TextView messageBox = (TextView) findViewById(R.id.message_box);
                     messageBox.setText(word1 + " " + word2);
                 }
+                placedTiles.push(tile);
                 /**
                  **
                  **  YOUR CODE GOES HERE
@@ -141,17 +146,64 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean onStartGame(View view) {
+        //clearing views and stacklayout
+        LinearLayout word1LinearLayout = findViewById(R.id.word1);
+        word1LinearLayout.removeAllViews();
+        LinearLayout word2LinearLayout = findViewById(R.id.word2);
+        word2LinearLayout.removeAllViews();
+        stackedLayout.clear();
+
         TextView messageBox = (TextView) findViewById(R.id.message_box);
         messageBox.setText("Game started");
-        /**
-         **
-         **  YOUR CODE GOES HERE
-         **
-         **/
+        int randInd1, randInd2, ind1, ind2;
+        word1 = "";
+        word2 = "";
+        while((word1.equals(word2) && word1.length() > 0) || word1.length() == 0){
+            randInd1 = random.nextInt(words.size());
+            randInd2 = random.nextInt(words.size());
+            word1 = words.get(randInd1);
+            word2 = words.get(randInd2);
+        }
+        StringBuilder shuffledWordSB = new StringBuilder();
+        ind1 = 0;
+        ind2 = 0;
+        //two cases, ind1 runs out b4, ind2 runs out b4
+        while(ind1 < word1.length() && shuffledWordSB.length() < word1.length() + word2.length()){
+            if(ind2 >= word2.length()){
+                shuffledWordSB.append(word1.substring(ind1));
+                ind1 = word1.length();
+
+            }
+            else if(random.nextInt(2) == 1) {
+                shuffledWordSB.append(word2.substring(ind2, ind2+1));
+                ind2++;
+            }
+            else{
+                shuffledWordSB.append(word1.substring(ind1, ind1+1));
+                ind1++;
+            }
+
+        }
+        if(ind2 < word2.length()){
+            shuffledWordSB.append(word2.substring(ind2));
+        }
+        String shuffledWord = shuffledWordSB.toString();
+        Log.d(TAG, "shuffledWord: " + shuffledWord + "word 1" + word1);
+        messageBox.setText(shuffledWord);
+        for(int i = shuffledWord.length()-1; i>=0; i--){
+            LetterTile tile = new LetterTile(this, shuffledWord.charAt(i));
+            stackedLayout.push(tile);
+
+        }
+
         return true;
     }
 
     public boolean onUndo(View view) {
+        if (!placedTiles.empty()) {
+            LetterTile popped = (LetterTile) placedTiles.pop();
+            popped.moveToViewGroup(stackedLayout);
+        }
         /**
          **
          **  YOUR CODE GOES HERE
